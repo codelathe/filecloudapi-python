@@ -6,7 +6,7 @@ description = "A Python library to connect to a Filecloud server"
 
 packages = [{ include = "filecloudapi" }]
 
-license = "MIT"
+license = "Apache-2.0"
 authors = ["FileCloud <dev@filecloud.com>"]
 
 readme = "README.md"
