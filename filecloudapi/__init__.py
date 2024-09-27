@@ -1,7 +1,7 @@
 # Copyright (c) 2024 FileCloud. All Rights Reserved.
-from .fcserver import FCServer
-from .exceptions import ServerError
 from .datastructures import EntryType, FileList, FileListEntry
+from .exceptions import ServerError
+from .fcserver import FCServer
 
 __ALL__ = [
     "FCServer",

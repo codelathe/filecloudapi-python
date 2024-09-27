@@ -16,12 +16,14 @@ Usage:
         --server-url: URL of the FileCloud server.
 """
 
+import os
 from dataclasses import dataclass
 from pathlib import Path
+
 import click
-import os
 
 from filecloudapi.fcserver import FCServer
+
 
 @dataclass
 class ServerConfig:
@@ -29,26 +31,65 @@ class ServerConfig:
     username: str
     password: str
 
-@click.option('-s', '--server-url', prompt=True, hide_input=False, help='URL of the FileCloud server') 
-@click.option('-u', '--username', prompt=True, hide_input=False, help='Username for authentication')
-@click.option('-p', '--password', prompt=True, hide_input=True, default=lambda: os.environ.get('FILECLOUD_PASSWORD', ''), help='Password for authentication')
+
+@click.option(
+    "-s",
+    "--server-url",
+    prompt=True,
+    hide_input=False,
+    help="URL of the FileCloud server",
+)
+@click.option(
+    "-u",
+    "--username",
+    prompt=True,
+    hide_input=False,
+    help="Username for authentication",
+)
+@click.option(
+    "-p",
+    "--password",
+    prompt=True,
+    hide_input=True,
+    default=lambda: os.environ.get("FILECLOUD_PASSWORD", ""),
+    help="Password for authentication",
+)
 @click.group()
 @click.pass_context
 def cli(ctx, server_url: str, username: str, password: str):
     ctx.obj = ServerConfig(server_url, username, password)
     pass
 
+
 def create_fcserver(config: ServerConfig) -> FCServer:
-    return FCServer(config.server_url, email=None, username=config.username, password=config.password)
+    return FCServer(
+        config.server_url,
+        email=None,
+        username=config.username,
+        password=config.password,
+    )
+
 
 @cli.command()
-@click.option('-l', '--local', type=Path, required=True, help='Path to the local file to be uploaded')
-@click.option('-r', '--remote', type=str, required=True, help='Remote path where the file should be uploaded on the FileCloud server')
+@click.option(
+    "-l",
+    "--local",
+    type=Path,
+    required=True,
+    help="Path to the local file to be uploaded",
+)
+@click.option(
+    "-r",
+    "--remote",
+    type=str,
+    required=True,
+    help="Remote path where the file should be uploaded on the FileCloud server",
+)
 @click.pass_obj
 def upload_file(config: ServerConfig, local: Path, remote: str):
     fcserver = create_fcserver(config)
     fcserver.upload_file(local, remote)
 
 
-if __name__ == '__main__':  # pragma: no cover
+if __name__ == "__main__":  # pragma: no cover
     cli()

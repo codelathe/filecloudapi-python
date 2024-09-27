@@ -1,47 +1,46 @@
 # Copyright (c) 2024 FileCloud. All Rights Reserved.
-from io import SEEK_CUR, SEEK_END, SEEK_SET, BufferedReader, BytesIO
-from typing import Dict
-import requests
-import logging
-import xml.etree.ElementTree as ET
-from typing import Union, Optional
-import pathlib
-import time
-from urllib.parse import urlencode
 import datetime
+import logging
+import pathlib
+import re
+import time
+import xml.etree.ElementTree as ET
+from io import SEEK_CUR, SEEK_END, SEEK_SET, BufferedReader, BytesIO
 from pathlib import Path
-from urllib3.filepost import RequestField, encode_multipart_formdata
+from typing import Dict, Optional, Union
+from urllib.parse import urlencode
 
+import requests
 from requests.adapters import HTTPAdapter
 from urllib3 import Retry
+from urllib3.filepost import RequestField, encode_multipart_formdata
 
 from .datastructures import (
     AclEntryType,
     AclPermissions,
     EntryType,
-    FileListEntry,
-    FileVersion,
-    FileList,
     FCShare,
-    FileLockInfo,
-    SharedType,
+    FCShareGroup,
     FCShareUser,
+    FileList,
+    FileListEntry,
+    FileLockInfo,
+    FileVersion,
+    NetworkFolderInfo,
+    PolicyEntry,
+    PolicyList,
+    PolicyUser,
+    RMCClient,
+    ShareActivity,
+    SharedType,
+    SortBy,
+    SortDir,
     SyncDeltaItem,
     SyncFolder,
     TeamFolderInfo,
-    NetworkFolderInfo,
-    RMCClient,
-    PolicyUser,
-    SortBy,
-    SortDir,
     UserStatus,
-    PolicyList,
-    PolicyEntry,
-    FCShareGroup,
-    ShareActivity,
 )
 from .exceptions import ServerError
-import re
 
 
 def str_to_bool(value):
@@ -145,7 +144,9 @@ class FCServer:
         result = resp.findtext("./command/result", "0")
 
         if int(result) != 1:
-            self._raise_exception_from_server_message(resp.findtext("./command/message", ""))
+            self._raise_exception_from_server_message(
+                resp.findtext("./command/message", "")
+            )
 
     def login(self) -> None:
         """
@@ -447,7 +448,8 @@ class FCServer:
         Returns True if file 'path' exists else False
         """
         resp = self._api_call(
-            "/core/fileexists", {"file": path, "caseinsensitive": 1 if caseinsensitive else 0}
+            "/core/fileexists",
+            {"file": path, "caseinsensitive": 1 if caseinsensitive else 0},
         )
 
         return int(resp.findtext("./command/result", "0")) == 1
@@ -477,7 +479,9 @@ class FCServer:
         while time.monotonic() - starttime < maxwaits:
             if self.fileexists(path):
                 if fsize == -1:
-                    log.info(f"Found {path} after {(time.monotonic() - starttime)} seconds")
+                    log.info(
+                        f"Found {path} after {(time.monotonic() - starttime)} seconds"
+                    )
                     return
                 else:
                     info = self.fileinfo(path)
@@ -641,21 +645,25 @@ class FCServer:
         data_marker = b"DATA_MARKER"
 
         class FileSlice(BufferedReader):
-            def __init__(self, stream: BufferedReader, start: int, size: int, envelope: bytes):
+            def __init__(
+                self, stream: BufferedReader, start: int, size: int, envelope: bytes
+            ):
                 super().__init__(stream)  # type: ignore
                 self.start = start
                 self.end = start + size
                 self.pos = start
                 self.envelope_prefix = envelope[: envelope.index(data_marker)]
                 self.envelope_read = 0
-                self.envelope_suffix = envelope[envelope.index(data_marker) + len(data_marker) :]
+                self.envelope_suffix = envelope[
+                    envelope.index(data_marker) + len(data_marker) :
+                ]
                 super().seek(start)
 
             def read(self, size=-1):
                 # Read the envelope first
-                if self.pos == self.end and self.envelope_read < len(self.envelope_suffix) + len(
-                    self.envelope_prefix
-                ):
+                if self.pos == self.end and self.envelope_read < len(
+                    self.envelope_suffix
+                ) + len(self.envelope_prefix):
                     if size < 0 or size > len(self.envelope_suffix):
                         size = len(self.envelope_suffix)
                     data = self.envelope_suffix[
@@ -669,10 +677,14 @@ class FCServer:
                 if self.pos >= self.end:
                     return b""
                 # Read then end of the envelope
-                if self.pos == self.start and self.envelope_read < len(self.envelope_prefix):
+                if self.pos == self.start and self.envelope_read < len(
+                    self.envelope_prefix
+                ):
                     if size < 0 or size > len(self.envelope_prefix):
                         size = len(self.envelope_prefix)
-                    data = self.envelope_prefix[self.envelope_read : self.envelope_read + size]
+                    data = self.envelope_prefix[
+                        self.envelope_read : self.envelope_read + size
+                    ]
                     self.envelope_read += len(data)
                     return data
                 # Read the file
@@ -686,7 +698,12 @@ class FCServer:
                 return data
 
             def __len__(self) -> int:
-                return self.end - self.start + len(self.envelope_prefix) + len(self.envelope_suffix)
+                return (
+                    self.end
+                    - self.start
+                    + len(self.envelope_prefix)
+                    + len(self.envelope_suffix)
+                )
 
             def __iter__(self):
                 return self
@@ -749,7 +766,8 @@ class FCServer:
                 )  # WEBUI DOES NOT ENCODE THE !
 
             resp = self.session.post(
-                self.url + "/core/upload?" + params_str, files={"file_contents": (name, b"")}
+                self.url + "/core/upload?" + params_str,
+                files={"file_contents": (name, b"")},
             )
 
             resp.raise_for_status()
@@ -908,7 +926,10 @@ class FCServer:
         self._raise_exception_from_command(resp)
 
     def createfolder(
-        self, path: str, subpath: Optional[str] = None, adminproxyuserid: Optional[str] = None
+        self,
+        path: str,
+        subpath: Optional[str] = None,
+        adminproxyuserid: Optional[str] = None,
     ) -> None:
         """
         Create folder at 'path'
@@ -935,7 +956,9 @@ class FCServer:
         """
         Rename a file
         """
-        resp = self._api_call("/core/renamefile", {"path": path, "name": name, "newname": newname})
+        resp = self._api_call(
+            "/core/renamefile", {"path": path, "name": name, "newname": newname}
+        )
         self._raise_exception_from_command(resp)
 
     def get_username(self):
@@ -1027,7 +1050,9 @@ class FCServer:
 
         raise TimeoutError("User does not have permission in share")
 
-    def lock(self, path: str, readlock: bool = False, relative_expiration: int = 0) -> None:
+    def lock(
+        self, path: str, readlock: bool = False, relative_expiration: int = 0
+    ) -> None:
         """
         Lock file at 'path'
             str: path to file
@@ -1150,9 +1175,15 @@ class FCServer:
                 rid=entry.findtext("./rid", ""),
                 remote_client_id=entry.findtext("./remote_client_id", ""),
                 remote_client_disp_name=entry.findtext("./remote_client_disp_name", ""),
-                remote_client_last_login=entry.findtext("./remote_client_last_login", ""),
-                remote_client_status=int(entry.findtext("./remote_client_status", "-1")),
-                remote_client_status_message=entry.findtext("./remote_client_status_message", ""),
+                remote_client_last_login=entry.findtext(
+                    "./remote_client_last_login", ""
+                ),
+                remote_client_status=int(
+                    entry.findtext("./remote_client_status", "-1")
+                ),
+                remote_client_status_message=entry.findtext(
+                    "./remote_client_status_message", ""
+                ),
             )
             entries.append(ne)
 
@@ -1183,7 +1214,9 @@ class FCServer:
             resp.findtext("./teamfolderproperty/aclenabled", "0") == "1",
         )
 
-        tf_list = self.getfilelist(f"/{tf_info.teamfolderaccount}", adminproxyuserid=self.username)
+        tf_list = self.getfilelist(
+            f"/{tf_info.teamfolderaccount}", adminproxyuserid=self.username
+        )
         tf_info.teamfolderpath = tf_list.entries[0].path  # type:ignore
 
         return tf_info
@@ -1313,7 +1346,9 @@ class FCServer:
                 ):
                     return
 
-                syncfolder.update_version = max(item.updateversion, syncfolder.update_version)
+                syncfolder.update_version = max(
+                    item.updateversion, syncfolder.update_version
+                )
 
             time.sleep(0.1)
 
@@ -1343,8 +1378,12 @@ class FCServer:
                 rid=entry.findtext("./rid", ""),
                 remote_client_id=entry.findtext("./remote_client_id", ""),
                 remote_client_disp_name=entry.findtext("./remote_client_disp_name", ""),
-                remote_client_last_login=entry.findtext("./remote_client_last_login", ""),
-                remote_client_status=int(entry.findtext("./remote_client_status", "-1")),
+                remote_client_last_login=entry.findtext(
+                    "./remote_client_last_login", ""
+                ),
+                remote_client_status=int(
+                    entry.findtext("./remote_client_status", "-1")
+                ),
                 remote_client_status_message=str(
                     entry.findtext("./remote_client_status_message", "")
                 ),
@@ -1433,7 +1472,9 @@ class FCServer:
 
         self._raise_exception_from_command(resp)
 
-    def admin_getusersforpolicy(self, policy_id: str = "") -> Optional[list[PolicyUser]]:
+    def admin_getusersforpolicy(
+        self, policy_id: str = ""
+    ) -> Optional[list[PolicyUser]]:
         """
         Returns a list of users assigned to policy
         """
@@ -1492,7 +1533,12 @@ class FCServer:
         self._raise_exception_from_command(resp)
 
     def admin_addnewuser(
-        self, username: str, email: str, password: str, authtype: str = "0", status: int = 1
+        self,
+        username: str,
+        email: str,
+        password: str,
+        authtype: str = "0",
+        status: int = 1,
     ) -> None:
         """
         Creates a new user to the server
@@ -1526,7 +1572,11 @@ class FCServer:
 
     def add_policy(self, policy_name: str, is_default=False) -> None:
         """Add a policy"""
-        payload = {"op": "addpolicy", "policyname": policy_name, "isdefault": is_default}
+        payload = {
+            "op": "addpolicy",
+            "policyname": policy_name,
+            "isdefault": is_default,
+        }
 
         resp = self._api_call(
             "/admin/addpolicy",
@@ -1700,8 +1750,15 @@ class FCServer:
         self._raise_exception_from_command(resp)
 
     def admin_getgroups(
-        self, start=0, limit=10, sortfield="", sortdir="1", everyone: Optional[bool] = False
-    ) -> Union[tuple[Optional[str], Optional[str]], list[tuple[Optional[str], Optional[str]]]]:
+        self,
+        start=0,
+        limit=10,
+        sortfield="",
+        sortdir="1",
+        everyone: Optional[bool] = False,
+    ) -> Union[
+        tuple[Optional[str], Optional[str]], list[tuple[Optional[str], Optional[str]]]
+    ]:
         """
         List all user groups
         If required, obtain the EVERYONE group only
@@ -1774,7 +1831,9 @@ class FCServer:
 
         groupid_text = resp.findtext("./group/groupid")
         if not groupid_text or groupid_text != group_id:
-            raise ServerError("", f"group {group_id} is not in shared folder '{str(share)}'")
+            raise ServerError(
+                "", f"group {group_id} is not in shared folder '{str(share)}'"
+            )
 
     def admin_addgrouptoshare(
         self, share: FCShare, groupid: str, adminproxyuserid: str = ""
@@ -1975,7 +2034,9 @@ class FCServer:
         if message not in ["Rule dropped successfully", "Rule name already dropped"]:
             raise ServerError("", f"Failed to delete rule {rule_name}")
 
-    def admin_set_config_setting(self, config_setting_name: str, config_setting_value: str):
+    def admin_set_config_setting(
+        self, config_setting_name: str, config_setting_value: str
+    ):
         """
         Set a single config setting
 
@@ -2003,7 +2064,9 @@ class FCServer:
         for client in clients:
             self.admin_removermcclient(client.remote_client_id)
 
-    def admin_waitforrmcclient(self, username: str, rmc_count: int, maxwaits: float = 60) -> None:
+    def admin_waitforrmcclient(
+        self, username: str, rmc_count: int, maxwaits: float = 60
+    ) -> None:
         """
         Wait for RMC Client count incremente by one in admin portal
         """
@@ -2034,7 +2097,9 @@ class FCServer:
         )
         self._raise_exception_from_command(resp)
 
-    def admin_checkshare(self, share_owner: str, share_filter: str = "", limit: int = 10) -> None:
+    def admin_checkshare(
+        self, share_owner: str, share_filter: str = "", limit: int = 10
+    ) -> None:
         """
         Get shares for specific user/filter if exists.
         Filter can be The share location, share-name or user-name
