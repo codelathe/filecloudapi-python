@@ -75,11 +75,11 @@ class FCServer:
         self.url = url
         self.adminlogin = adminlogin
         self.session = requests.session()
-
-        if withretries:
-            self.retries = Retry(total=10, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])  # type: ignore
-        else:
-            self.retries = None
+        self.retries: Optional[Retry] = (
+            Retry(total=10, backoff_factor=0.1, status_forcelist=[500, 502, 503, 504])
+            if withretries
+            else None
+        )
 
         self.session.mount("http://", HTTPAdapter(max_retries=self.retries))
         self.session.mount("https://", HTTPAdapter(max_retries=self.retries))
@@ -235,7 +235,7 @@ class FCServer:
         """
         fullsize_str = entry.findtext("./fullsize")
 
-        if fullsize_str == None:
+        if fullsize_str is None:
             raise ValueError("fullsize in file entry is None in server response")
 
         fullsize = 0
@@ -316,7 +316,7 @@ class FCServer:
         )
 
         meta = resp.find("./meta")
-        if meta == None:
+        if meta is None:
             raise ValueError("No meta in server response")
 
         result = int(meta.findtext("./result", "0"))
@@ -327,7 +327,7 @@ class FCServer:
         entries: list[FileListEntry] = []
 
         def bool_opt(txt: Union[None, str]) -> bool:
-            if txt != None and len(txt) > 0:
+            if txt is not None and len(txt) > 0:
                 return int(txt) > 0
             else:
                 return False
@@ -351,7 +351,7 @@ class FCServer:
 
         entry = resp.find("./entry")
 
-        if entry == None:
+        if entry is None:
             raise FileNotFoundError(f"File '{path}' does not exist")
 
         return self._parseEntry(entry)
@@ -517,7 +517,7 @@ class FCServer:
         """
         with self.session.get(
             self.url + "/core/downloadfile",
-            params={
+            params={  # type:ignore
                 "filepath": path,
                 "filename": path.split("/")[-1],
                 "redirect": 1 if redirect else 0,
