@@ -180,13 +180,6 @@ class FCServer:
                 },
             )
 
-            ok = int(resp.findtext("./command/result", "0")) == 1
-
-            if ok:
-                # We need a new code for the next login
-                while code == self.twofakeyfun():
-                    time.sleep(1)
-
         self._raise_exception_from_command(resp)
 
     def login_as_admin(self) -> None:
@@ -219,13 +212,6 @@ class FCServer:
                     "password": self.password,
                 },
             )
-
-            ok = int(resp.findtext("./command/result", "0")) == 1
-
-            if ok:
-                # We need a new code for the next login
-                while code == self.twofakeyfun():
-                    time.sleep(1)
 
         self._raise_exception_from_command(resp)
 

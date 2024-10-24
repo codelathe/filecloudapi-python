@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "filecloudapi-python"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python library to connect to a Filecloud server"
 
 packages = [{ include = "filecloudapi" }]
