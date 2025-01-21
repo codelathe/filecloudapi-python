@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "filecloudapi-python"
-version = "0.1.2"
+version = "0.2"
 description = "A Python library to connect to a Filecloud server"
 
 packages = [{ include = "filecloudapi" }]
@@ -33,7 +33,7 @@ python = "^3.11"
 click = "*"
 requests = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 
 # Formatters
 black = "^22.1"
