@@ -1,5 +1,6 @@
 # Copyright (c) 2024 FileCloud. All Rights Reserved.
 import datetime
+import threading
 import logging
 import pathlib
 import re
@@ -48,6 +49,35 @@ def str_to_bool(value):
 
 
 log = logging.getLogger(__name__)
+
+class Progress:
+    """
+    Way to track progress of uploads/downloads.
+
+    Either use this object in another thread or
+    override update() to get progress updates.
+    """
+
+    def __init__(self) -> None:
+        self._completed_bytes = 0
+        self._total_bytes = 0
+        self._lock = threading.Lock()
+
+    """
+    Progress callback of uploads/downloads
+    """
+    def update(self, completed_bytes: int, total_bytes: int, chunk_complete: bool) -> None:
+        with self._lock:
+            self._completed_bytes = completed_bytes
+            self._total_bytes = total_bytes
+
+    def completed_bytes(self) -> int:
+        with self._lock:
+            return self._completed_bytes
+    
+    def total_bytes(self) -> int:
+        with self._lock:
+            return self._total_bytes
 
 
 class FCServer:
@@ -496,7 +526,8 @@ class FCServer:
         raise TimeoutError(f"File {path} not removed after {maxwaits} seconds")
 
     def downloadfile_no_retry(
-        self, path: str, dstPath: Union[pathlib.Path, str], redirect: bool = True
+        self, path: str, dstPath: Union[pathlib.Path, str], redirect: bool = True,
+        progress: Optional[Progress] = None
     ) -> None:
         """
         Download file at 'path' to local 'dstPath'
@@ -511,23 +542,29 @@ class FCServer:
             stream=True,
         ) as resp:
             resp.raise_for_status()
+            content_length = int(resp.headers.get("Content-Length", "-1"))
+            completed_bytes = 0
             with open(dstPath, "wb") as dstF:
                 for chunk in resp.iter_content(128 * 1024):
+                    completed_bytes += len(chunk)
                     dstF.write(chunk)
+                    if progress is not None:                        
+                        progress.update(completed_bytes, content_length, False)
 
     def downloadfile(
-        self, path: str, dstPath: Union[pathlib.Path, str], redirect: bool = True
+        self, path: str, dstPath: Union[pathlib.Path, str], redirect: bool = True,
+        progress: Optional[Progress] = None
     ) -> None:
         """
         Download file at 'path' to local 'dstPath'. Retries.
         """
         if self.retries is None:
-            return self.downloadfile_no_retry(path, dstPath, redirect)
+            return self.downloadfile_no_retry(path, dstPath, redirect, progress)
 
         retries = self.retries
         while True:
             try:
-                self.downloadfile_no_retry(path, dstPath, redirect)
+                self.downloadfile_no_retry(path, dstPath, redirect, progress)
                 return
             except:
                 retries = retries.increment()
@@ -568,22 +605,24 @@ class FCServer:
         data: bytes,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        progress: Optional[Progress] = None
     ) -> None:
         """
         Upload bytes 'data' to server at 'serverpath'.
         """
-        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified)  # type: ignore
+        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, progress=progress)  # type: ignore
 
     def upload_str(
         self,
         data: str,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        progress: Optional[Progress] = None
     ) -> None:
         """
         Upload str 'data' UTF-8 encoded to server at 'serverpath'.
         """
-        self.upload_bytes(data.encode("utf-8"), serverpath, datemodified)
+        self.upload_bytes(data.encode("utf-8"), serverpath, datemodified, progress=progress)
 
     def upload_file(
         self,
@@ -591,6 +630,7 @@ class FCServer:
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
         adminproxyuserid: Optional[str] = None,
+        progress: Optional[Progress] = None
     ) -> None:
         """
         Upload file at 'localpath' to server at 'serverpath'.
@@ -601,6 +641,7 @@ class FCServer:
                 serverpath,
                 datemodified,
                 adminproxyuserid=adminproxyuserid,
+                progress=progress
             )
 
     def _serverdatetime(self, dt: datetime.datetime):
@@ -619,6 +660,7 @@ class FCServer:
         serverpath: str,
         datemodified: datetime.datetime,
         adminproxyuserid: Optional[str] = None,
+        progress: Optional[Progress] = None,
     ) -> None:
         """
         Upload seekable stream at uploadf to server at 'serverpath'
@@ -681,6 +723,8 @@ class FCServer:
                     size = min(size, max_read)
                 data = super().read(size)
                 self.pos += len(data)
+                if progress is not None:
+                    progress.update(self.pos, data_size, False)
                 return data
 
             def __len__(self) -> int:
@@ -810,6 +854,9 @@ class FCServer:
                 raise ServerError("", resp.text)
 
             pos += curr_slice_size
+
+            if progress is not None:
+                progress.update(pos, data_size, True)
 
     def share(self, path: str, adminproxyuserid: str = "") -> FCShare:
         """
