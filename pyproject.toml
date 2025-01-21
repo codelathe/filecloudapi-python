@@ -33,7 +33,7 @@ python = "^3.11"
 click = "*"
 requests = "*"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 
 # Formatters
 black = "^22.1"
