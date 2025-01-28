@@ -1,7 +1,7 @@
 [tool.poetry]
 
 name = "filecloudapi-python"
-version = "0.2"
+version = "0.2.1"
 description = "A Python library to connect to a Filecloud server"
 
 packages = [{ include = "filecloudapi" }]
@@ -14,8 +14,7 @@ homepage = "https://pypi.org/project/filecloudapi-python"
 documentation = "https://filecloudapi-python.readthedocs.io"
 repository = "https://github.com/codelathe/filecloudapi-python"
 
-keywords = [
-]
+keywords = []
 classifiers = [
     "Development Status :: 4 - Beta",
     "Natural Language :: English",
@@ -23,7 +22,7 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
-    "License :: OSI Approved :: Apache Software License"
+    "License :: OSI Approved :: Apache Software License",
 ]
 
 [tool.poetry.dependencies]
@@ -37,7 +36,7 @@ requests = "*"
 
 # Formatters
 black = "^22.1"
-tomli = "*" # missing 'black' dependency
+tomli = "*"     # missing 'black' dependency
 isort = "^5.10"
 
 # Linters
@@ -45,7 +44,7 @@ mypy = "^1.0"
 pydocstyle = "^6.1"
 pylint = "~2.15"
 pylint-pytest = "*"
-wrapt = "*" # missing 'pylint' dependency
+wrapt = "*"         # missing 'pylint' dependency
 
 # Testing
 pytest = "^8.1"
