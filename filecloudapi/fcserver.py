@@ -902,6 +902,34 @@ class FCServer:
             str_to_bool(resp.findtext("./share/allowpublicuploadonly", "")),
         )
 
+    def quickshare(self, sharelocation: str, adminproxyuserid: str = "") -> FCShare:
+        """
+        Quick Share 'sharelocation'
+        """
+        resp = self._api_call(
+            "/core/quickshare",
+            {"sharelocation": sharelocation, "adminproxyuserid": adminproxyuserid},
+        )
+
+        shareid = resp.findtext("./share/shareid", "")
+
+        if not shareid:
+            msg = resp.findtext("./meta/message", "")
+            if msg:
+                raise ServerError("", msg)
+            else:
+                raise ServerError("", "No shareid in response")
+
+        return FCShare(
+            shareid,
+            resp.findtext("./share/sharename", ""),
+            resp.findtext("./share/sharelocation", ""),
+            str_to_bool(resp.findtext("./share/allowpublicaccess", "")),
+            str_to_bool(resp.findtext("./share/allowpublicupload", "")),
+            str_to_bool(resp.findtext("./share/allowpublicviewonly", "")),
+            str_to_bool(resp.findtext("./share/allowpublicuploadonly", "")),
+        )
+
     def getshareforpath(self, path: str, adminproxyuserid: str = "") -> FCShare:
         """
         Share 'path'
