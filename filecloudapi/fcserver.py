@@ -1961,9 +1961,14 @@ class FCServer:
 
     def admin_setgroupaccessforshare(
         self,
-        share: Optional[FCShare],
+        share_obj: Optional[FCShare],
         groupid: str,
         adminproxyuserid: str = "",
+        write: bool = True,
+        download: bool = True,
+        share: bool = True,
+        sync: bool = True,
+        disallowdelete: bool = False,
     ) -> None:
         """
         Set all user permissions for share
@@ -1971,13 +1976,13 @@ class FCServer:
         resp = self._api_call(
             "/app/websharepro/setgroupaccessforshare",
             {
-                "shareid": share.shareid if share else "false",
+                "shareid": share_obj.shareid if share_obj else "false",
                 "groupid": groupid,
-                "write": "true",
-                "download": "true",
-                "share": "true",
-                "sync": "true",
-                "disallowdelete": "false",
+                "write": str(write).lower(),
+                "download": str(download).lower(),
+                "share": str(share).lower(),
+                "sync": str(sync).lower(),
+                "disallowdelete": str(disallowdelete).lower(),
                 "adminproxyuserid": adminproxyuserid,
             },
         )
