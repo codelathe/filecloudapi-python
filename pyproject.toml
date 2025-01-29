@@ -36,7 +36,7 @@ requests = "*"
 [tool.poetry.group.dev.dependencies]
 
 # Formatters
-black = "^22.1"
+black = ">=22.1,<25.0"
 tomli = "*" # missing 'black' dependency
 isort = "^5.10"
 
@@ -67,7 +67,7 @@ pyinstaller = "*"
 sniffer = "*"
 MacFSEvents = { version = "*", platform = "darwin" }
 pync = { version = "*", platform = "darwin" }
-ipython = "^7.12.0"
+ipython = ">=7.12,<9.0"
 
 # For mypy
 types-requests = "*"
