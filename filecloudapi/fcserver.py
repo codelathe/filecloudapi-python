@@ -998,6 +998,15 @@ class FCServer:
 
         self._raise_exception_from_command(resp)
 
+    def addgrouptoshare(self, share: FCShare, groupid: str) -> None:
+        """
+        Allow group access to share
+        """
+        resp = self._api_call(
+            "/core/addgrouptoshare", {"shareid": share.shareid, "groupid": groupid}
+        )
+        self._raise_exception_from_command(resp)
+
     def createfolder(
         self,
         path: str,
@@ -1061,6 +1070,35 @@ class FCServer:
                 "shareid": share.shareid if share else "false",
                 "userid": userid,
                 "allowmanage": "true" if allowmanage else "false",
+                "write": "true" if allowwrite else "false",
+                "download": "true" if allowdownload else "false",
+                "share": "true" if allowshare else "false",
+                "sync": "true" if allowsync else "false",
+                "disallowdelete": "true" if disallowdelete else "false",
+                "adminproxyuserid": adminproxyuserid if adminproxyuserid else "",
+            },
+        )
+        self._raise_exception_from_command(resp)
+
+    def setgroupaccessforshare(
+        self,
+        share: FCShare,
+        groupid: str,
+        allowwrite: bool,
+        allowdownload: bool,
+        allowshare: bool,
+        allowsync: bool,
+        disallowdelete: bool,
+        adminproxyuserid: Optional[str] = None,
+    ) -> None:
+        """
+        Set group permissions for share
+        """
+        resp = self._api_call(
+            "/core/setgroupaccessforshare",
+            {
+                "shareid": share.shareid,
+                "groupid": groupid,
                 "write": "true" if allowwrite else "false",
                 "download": "true" if allowdownload else "false",
                 "share": "true" if allowshare else "false",
