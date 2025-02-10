@@ -671,6 +671,8 @@ class FCServer:
         uploadf: BufferedReader,
         serverpath: str,
         datemodified: datetime.datetime,
+        nofileoverwrite: bool = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
     ) -> None:
@@ -799,6 +801,8 @@ class FCServer:
                 "filesize": 0,
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
+                "nofileoverwrite": nofileoverwrite,
+                "iflastmodified": self._serverdatetime(iflastmodified) if iflastmodified else None,
             }
             params_str = urlencode(params)
 
