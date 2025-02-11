@@ -802,7 +802,9 @@ class FCServer:
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
                 "nofileoverwrite": nofileoverwrite,
-                "iflastmodified": self._serverdatetime(iflastmodified) if iflastmodified else None,
+                "iflastmodified": (
+                    self._serverdatetime(iflastmodified) if iflastmodified else None
+                ),
             }
             params_str = urlencode(params)
 
@@ -845,7 +847,9 @@ class FCServer:
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
                 "nofileoverwrite": nofileoverwrite,
-                "iflastmodified": self._serverdatetime(iflastmodified) if iflastmodified else None,
+                "iflastmodified": (
+                    self._serverdatetime(iflastmodified) if iflastmodified else None
+                ),
             }
 
             if data_size is not None:
