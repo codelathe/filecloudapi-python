@@ -844,6 +844,8 @@ class FCServer:
                 "filename": name,
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
+                "nofileoverwrite": nofileoverwrite,
+                "iflastmodified": self._serverdatetime(iflastmodified) if iflastmodified else None,
             }
 
             if data_size is not None:
