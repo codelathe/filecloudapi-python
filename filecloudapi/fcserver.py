@@ -641,6 +641,8 @@ class FCServer:
         localpath: pathlib.Path,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: bool = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
     ) -> None:
@@ -652,6 +654,8 @@ class FCServer:
                 uploadf,
                 serverpath,
                 datemodified,
+                nofileoverwrite,
+                iflastmodified,
                 adminproxyuserid=adminproxyuserid,
                 progress=progress,
             )
