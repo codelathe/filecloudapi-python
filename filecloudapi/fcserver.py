@@ -815,10 +815,11 @@ class FCServer:
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
                 "nofileoverwrite": nofileoverwrite,
-                "iflastmodified": (
-                    self._serverdatetime(iflastmodified) if iflastmodified else None
-                ),
             }
+
+            if iflastmodified is not None:
+                params["iflastmodified"] = self._serverdatetime(iflastmodified)
+
             params_str = urlencode(params)
 
             if params_str.find("%2FSHARED%2F%21"):
@@ -860,10 +861,10 @@ class FCServer:
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
                 "nofileoverwrite": nofileoverwrite,
-                "iflastmodified": (
-                    self._serverdatetime(iflastmodified) if iflastmodified else None
-                ),
             }
+
+            if iflastmodified is not None:
+                params["iflastmodified"] = self._serverdatetime(iflastmodified)
 
             if data_size is not None:
                 params["filesize"] = data_size
