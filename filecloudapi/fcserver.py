@@ -615,25 +615,34 @@ class FCServer:
         data: bytes,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
     ) -> None:
         """
         Upload bytes 'data' to server at 'serverpath'.
         """
-        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, progress=progress)  # type: ignore
+        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, nofileoverwrite=nofileoverwrite, iflastmodified=iflastmodified, progress=progress)  # type: ignore
 
     def upload_str(
         self,
         data: str,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
     ) -> None:
         """
         Upload str 'data' UTF-8 encoded to server at 'serverpath'.
         """
         self.upload_bytes(
-            data.encode("utf-8"), serverpath, datemodified, progress=progress
+            data.encode("utf-8"),
+            serverpath,
+            datemodified,
+            nofileoverwrite=nofileoverwrite,
+            iflastmodified=iflastmodified,
+            progress=progress,
         )
 
     def upload_file(
@@ -641,6 +650,8 @@ class FCServer:
         localpath: pathlib.Path,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
     ) -> None:
@@ -652,6 +663,8 @@ class FCServer:
                 uploadf,
                 serverpath,
                 datemodified,
+                nofileoverwrite,
+                iflastmodified,
                 adminproxyuserid=adminproxyuserid,
                 progress=progress,
             )
@@ -671,7 +684,7 @@ class FCServer:
         uploadf: BufferedReader,
         serverpath: str,
         datemodified: datetime.datetime,
-        nofileoverwrite: bool = False,
+        nofileoverwrite: Optional[bool] = False,
         iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
@@ -801,11 +814,14 @@ class FCServer:
                 "filesize": 0,
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
-                "nofileoverwrite": nofileoverwrite,
-                "iflastmodified": (
-                    self._serverdatetime(iflastmodified) if iflastmodified else None
-                ),
             }
+
+            if nofileoverwrite is not None:
+                params["nofileoverwrite"] = "true" if nofileoverwrite else "false"
+
+            if iflastmodified is not None:
+                params["iflastmodified"] = self._serverdatetime(iflastmodified)
+
             params_str = urlencode(params)
 
             if params_str.find("%2FSHARED%2F%21"):
@@ -846,11 +862,13 @@ class FCServer:
                 "filename": name,
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
-                "nofileoverwrite": nofileoverwrite,
-                "iflastmodified": (
-                    self._serverdatetime(iflastmodified) if iflastmodified else None
-                ),
             }
+
+            if nofileoverwrite is not None:
+                params["nofileoverwrite"] = "true" if nofileoverwrite else "false"
+
+            if iflastmodified is not None:
+                params["iflastmodified"] = self._serverdatetime(iflastmodified)
 
             if data_size is not None:
                 params["filesize"] = data_size
