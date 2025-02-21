@@ -814,8 +814,10 @@ class FCServer:
                 "filesize": 0,
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
-                "nofileoverwrite": nofileoverwrite,
             }
+
+            if nofileoverwrite is not None:
+                params["nofileoverwrite"] = "true" if nofileoverwrite else "false"
 
             if iflastmodified is not None:
                 params["iflastmodified"] = self._serverdatetime(iflastmodified)
@@ -860,8 +862,10 @@ class FCServer:
                 "filename": name,
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
-                "nofileoverwrite": nofileoverwrite,
             }
+
+            if nofileoverwrite is not None:
+                params["nofileoverwrite"] = "true" if nofileoverwrite else "false"
 
             if iflastmodified is not None:
                 params["iflastmodified"] = self._serverdatetime(iflastmodified)
