@@ -817,10 +817,10 @@ class FCServer:
             }
 
             if nofileoverwrite is not None:
-                params["nofileoverwrite"] = "true" if nofileoverwrite else "false"
+                params["nofileoverwrite"] = 1 if nofileoverwrite else 0
 
             if iflastmodified is not None:
-                params["iflastmodified"] = self._serverdatetime(iflastmodified)
+                params["iflastmodified"] = str(int(iflastmodified.timestamp()))
 
             params_str = urlencode(params)
 
@@ -865,10 +865,10 @@ class FCServer:
             }
 
             if nofileoverwrite is not None:
-                params["nofileoverwrite"] = "true" if nofileoverwrite else "false"
+                params["nofileoverwrite"] = 1 if nofileoverwrite else 0
 
             if iflastmodified is not None:
-                params["iflastmodified"] = self._serverdatetime(iflastmodified)
+                params["iflastmodified"] = str(int(iflastmodified.timestamp()))
 
             if data_size is not None:
                 params["filesize"] = data_size
