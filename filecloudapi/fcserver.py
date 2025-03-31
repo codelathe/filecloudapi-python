@@ -616,25 +616,34 @@ class FCServer:
         data: bytes,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
     ) -> None:
         """
         Upload bytes 'data' to server at 'serverpath'.
         """
-        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, progress=progress)  # type: ignore
+        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, nofileoverwrite=nofileoverwrite, iflastmodified=iflastmodified, progress=progress)  # type: ignore
 
     def upload_str(
         self,
         data: str,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
     ) -> None:
         """
         Upload str 'data' UTF-8 encoded to server at 'serverpath'.
         """
         self.upload_bytes(
-            data.encode("utf-8"), serverpath, datemodified, progress=progress
+            data.encode("utf-8"),
+            serverpath,
+            datemodified,
+            nofileoverwrite=nofileoverwrite,
+            iflastmodified=iflastmodified,
+            progress=progress,
         )
 
     def upload_file(
@@ -642,6 +651,8 @@ class FCServer:
         localpath: pathlib.Path,
         serverpath: str,
         datemodified: datetime.datetime = datetime.datetime.now(),
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
     ) -> None:
@@ -653,6 +664,8 @@ class FCServer:
                 uploadf,
                 serverpath,
                 datemodified,
+                nofileoverwrite,
+                iflastmodified,
                 adminproxyuserid=adminproxyuserid,
                 progress=progress,
             )
@@ -672,6 +685,8 @@ class FCServer:
         uploadf: BufferedReader,
         serverpath: str,
         datemodified: datetime.datetime,
+        nofileoverwrite: Optional[bool] = False,
+        iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
     ) -> None:
@@ -801,6 +816,13 @@ class FCServer:
                 "date": self._serverdatetime(datemodified),
                 "adminproxyuserid": adminproxyuserid,
             }
+
+            if nofileoverwrite is not None:
+                params["nofileoverwrite"] = 1 if nofileoverwrite else 0
+
+            if iflastmodified is not None:
+                params["iflastmodified"] = str(int(iflastmodified.timestamp()))
+
             params_str = urlencode(params)
 
             if params_str.find("%2FSHARED%2F%21"):
@@ -843,6 +865,12 @@ class FCServer:
                 "adminproxyuserid": adminproxyuserid,
             }
 
+            if nofileoverwrite is not None:
+                params["nofileoverwrite"] = 1 if nofileoverwrite else 0
+
+            if iflastmodified is not None:
+                params["iflastmodified"] = str(int(iflastmodified.timestamp()))
+
             if data_size is not None:
                 params["filesize"] = data_size
 
@@ -882,6 +910,34 @@ class FCServer:
                 "adminproxyuserid": adminproxyuserid,
                 "sharename": path.split("/")[:-1],
             },
+        )
+
+        shareid = resp.findtext("./share/shareid", "")
+
+        if not shareid:
+            msg = resp.findtext("./meta/message", "")
+            if msg:
+                raise ServerError("", msg)
+            else:
+                raise ServerError("", "No shareid in response")
+
+        return FCShare(
+            shareid,
+            resp.findtext("./share/sharename", ""),
+            resp.findtext("./share/sharelocation", ""),
+            str_to_bool(resp.findtext("./share/allowpublicaccess", "")),
+            str_to_bool(resp.findtext("./share/allowpublicupload", "")),
+            str_to_bool(resp.findtext("./share/allowpublicviewonly", "")),
+            str_to_bool(resp.findtext("./share/allowpublicuploadonly", "")),
+        )
+
+    def quickshare(self, sharelocation: str, adminproxyuserid: str = "") -> FCShare:
+        """
+        Quick Share 'sharelocation'
+        """
+        resp = self._api_call(
+            "/core/quickshare",
+            {"sharelocation": sharelocation, "adminproxyuserid": adminproxyuserid},
         )
 
         shareid = resp.findtext("./share/shareid", "")
@@ -971,6 +1027,15 @@ class FCServer:
 
         self._raise_exception_from_command(resp)
 
+    def addgrouptoshare(self, share: FCShare, groupid: str) -> None:
+        """
+        Allow group access to share
+        """
+        resp = self._api_call(
+            "/core/addgrouptoshare", {"shareid": share.shareid, "groupid": groupid}
+        )
+        self._raise_exception_from_command(resp)
+
     def createfolder(
         self,
         path: str,
@@ -1034,6 +1099,35 @@ class FCServer:
                 "shareid": share.shareid if share else "false",
                 "userid": userid,
                 "allowmanage": "true" if allowmanage else "false",
+                "write": "true" if allowwrite else "false",
+                "download": "true" if allowdownload else "false",
+                "share": "true" if allowshare else "false",
+                "sync": "true" if allowsync else "false",
+                "disallowdelete": "true" if disallowdelete else "false",
+                "adminproxyuserid": adminproxyuserid if adminproxyuserid else "",
+            },
+        )
+        self._raise_exception_from_command(resp)
+
+    def setgroupaccessforshare(
+        self,
+        share: FCShare,
+        groupid: str,
+        allowwrite: bool,
+        allowdownload: bool,
+        allowshare: bool,
+        allowsync: bool,
+        disallowdelete: bool,
+        adminproxyuserid: Optional[str] = None,
+    ) -> None:
+        """
+        Set group permissions for share
+        """
+        resp = self._api_call(
+            "/core/setgroupaccessforshare",
+            {
+                "shareid": share.shareid,
+                "groupid": groupid,
                 "write": "true" if allowwrite else "false",
                 "download": "true" if allowdownload else "false",
                 "share": "true" if allowshare else "false",
@@ -1585,7 +1679,7 @@ class FCServer:
             config_opts[param_key] = config[i]
 
         resp = self._api_call(
-            "/admin/setconfigsetting",
+            "/admin/getconfigsetting",
             {
                 "count": str(len(config_opts)),
                 **{f"param{i}": value for i, value in enumerate(config_opts)},
