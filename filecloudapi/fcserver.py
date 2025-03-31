@@ -40,6 +40,7 @@ from .datastructures import (
     SyncFolder,
     TeamFolderInfo,
     UserStatus,
+    ServerSettings,
 )
 from .exceptions import ServerError
 
@@ -1565,6 +1566,34 @@ class FCServer:
         )
 
         self._raise_exception_from_command(resp)
+
+    def get_config_settings(self, config: list[str]) -> None:
+        """
+        Retrieve Filecloud configuration settings. The config list should
+        contain FC configuration keys.
+        Args:
+            config: Dictionary containing FC config keys and values
+        """
+        try:
+            count = len(config)
+        except (ValueError, TypeError):
+            count = 0
+
+        config_opts = []
+        for i in range(count):
+            param_key = f"param{i}"
+            config_opts[param_key] = config[i]
+
+        resp = self._api_call(
+            "/admin/setconfigsetting",
+            {
+                "count": str(len(config_opts)),
+                **{f"param{i}": value for i, value in enumerate(config_opts)},
+            },
+        )
+
+        settings = ServerSettings(resp)
+        return settings
 
     def set_config_setting(self, config_name: str, config_val: str) -> None:
         """
