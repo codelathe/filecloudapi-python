@@ -1666,7 +1666,7 @@ class FCServer:
         Retrieve Filecloud configuration settings. The config list should
         contain FC configuration keys.
         Args:
-            config: Dictionary containing FC config keys and values
+            config: List containing FC config keys
         """
         try:
             count = len(config)
