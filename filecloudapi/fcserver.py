@@ -8,7 +8,7 @@ import time
 import xml.etree.ElementTree as ET
 from io import SEEK_CUR, SEEK_END, SEEK_SET, BufferedReader, BytesIO
 from pathlib import Path
-from typing import Dict, Optional, Union, List
+from typing import Dict, List, Optional, Union
 from urllib.parse import urlencode
 
 import requests
@@ -32,6 +32,7 @@ from .datastructures import (
     PolicyList,
     PolicyUser,
     RMCClient,
+    ServerSettings,
     ShareActivity,
     SharedType,
     SortBy,
@@ -40,7 +41,6 @@ from .datastructures import (
     SyncFolder,
     TeamFolderInfo,
     UserStatus,
-    ServerSettings,
 )
 from .exceptions import ServerError
 
