@@ -278,37 +278,6 @@ class PolicyList:
             self.entries.append(an_entry)
 
 
-class PolicyList:
-    """Convienience class represents policy list"""
-
-    entries: list[PolicyEntry] = []
-
-    def first(self) -> PolicyEntry | None:
-        if len(self.entries) >= 1:
-            return self.entries[0]
-        return None
-
-    def __iter__(self):
-        return iter(self.entries)
-
-    def __init__(self, a_response: Element):
-        """"""
-        self._set_entries(response=a_response)
-
-    def _set_entries(self, response: Element):
-        a_list = list(response)
-
-        for elem in a_list:
-            if elem.tag != "policy":
-                continue
-
-            an_entry = PolicyEntry(
-                policyid=list(elem)[0].text,  # type:ignore
-                policyname=list(elem)[1].text,  # type:ignore
-            )
-            self.entries.append(an_entry)
-
-
 class ServerSettings:
     """Convienience class represents server settings"""
 
