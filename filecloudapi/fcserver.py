@@ -8,7 +8,7 @@ import time
 import xml.etree.ElementTree as ET
 from io import SEEK_CUR, SEEK_END, SEEK_SET, BufferedReader, BytesIO
 from pathlib import Path
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, List
 from urllib.parse import urlencode
 
 import requests
@@ -1661,7 +1661,7 @@ class FCServer:
 
         self._raise_exception_from_command(resp)
 
-    def get_config_settings(self, config: list[str]) -> None:
+    def admin_get_config_settings(self, config: List[str]) -> ServerSettings:
         """
         Retrieve Filecloud configuration settings. The config list should
         contain FC configuration keys.
@@ -1673,18 +1673,14 @@ class FCServer:
         except (ValueError, TypeError):
             count = 0
 
-        config_opts = []
+        config_opts = {}
         for i in range(count):
             param_key = f"param{i}"
-            config_opts[param_key] = config[i]
+            config_opts[param_key] = config[i]  # type:ignore
 
-        resp = self._api_call(
-            "/admin/getconfigsetting",
-            {
-                "count": str(len(config_opts)),
-                **{f"param{i}": value for i, value in enumerate(config_opts)},
-            },
-        )
+        config_opts["count"] = str(len(config_opts))
+
+        resp = self._api_call("/admin/getconfigsetting", config_opts)
 
         settings = ServerSettings(resp)
         return settings

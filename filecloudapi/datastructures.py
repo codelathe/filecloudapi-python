@@ -328,7 +328,7 @@ class ServerSettings:
             if elem.tag != "setting":
                 continue
 
-            self.entries[elem.get("param")] = elem.get("value")
+            self.entries[list(elem)[0].text] = list(elem)[1].text
 
 
 @dataclass
