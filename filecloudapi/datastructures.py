@@ -278,6 +278,28 @@ class PolicyList:
             self.entries.append(an_entry)
 
 
+class ServerSettings:
+    """Convienience class represents server settings"""
+
+    entries: dict = {}
+
+    def __iter__(self):
+        return iter(self.entries)
+
+    def __init__(self, a_response: Element):
+        """"""
+        self._set_entries(response=a_response)
+
+    def _set_entries(self, response: Element):
+        a_list = list(response)
+
+        for elem in a_list:
+            if elem.tag != "setting":
+                continue
+
+            self.entries[list(elem)[0].text] = list(elem)[1].text
+
+
 @dataclass
 class StorageRootDetails:
     type: str
