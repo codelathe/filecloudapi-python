@@ -959,7 +959,7 @@ class FCServer:
             str_to_bool(resp.findtext("./share/allowpublicuploadonly", "")),
         )
 
-    def deleteshare(self, share :FCShare) -> None:
+    def deleteshare(self, share: FCShare) -> None:
         resp = self._api_call(
             "/core/deleteshare",
             {"shareid": share.shareid},
