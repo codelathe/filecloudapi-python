@@ -1979,7 +1979,7 @@ class FCServer:
             {"op": "addgroup", "groupname": groupname},
         )
 
-        if int(resp.findtext("./group/groupname", "0")) != 1:
+        if resp.findtext("./group/groupname") is None:
             raise ServerError("", "Failed to create group")
 
     def admin_groupisinshare(
@@ -2367,3 +2367,18 @@ class FCServer:
                 entries.append(shares_acts)
 
         return entries
+
+    def admin_deletegroup(self, groupid: str) -> bool:
+        """
+        Delete a user group
+        """
+        resp = self._api_call(
+            "/admin/deletegroup",
+            {"op": "deletegroup", "groupid": groupid},
+        )
+
+        result = resp.findtext("./command/result")
+        if result == "0":
+            return True
+        else:
+            return False
