@@ -20,6 +20,9 @@ class AclEntryType(Enum):
     user = "user"
 
 
+ETag = str
+
+
 @dataclass
 class FileListEntry:
     path: str
@@ -43,6 +46,7 @@ class FileListEntry:
     isshareable: bool
     issyncable: bool
     isdatasyncable: bool
+    etag: ETag
 
 
 @dataclass
