@@ -20,6 +20,7 @@ from .datastructures import (
     AclEntryType,
     AclPermissions,
     EntryType,
+    ETag,
     FCShare,
     FCShareGroup,
     FCShareUser,
@@ -50,6 +51,8 @@ def str_to_bool(value):
 
 
 log = logging.getLogger(__name__)
+
+SEND_ETAG_HEADER = "X-FC-Send-ETag"
 
 
 class Progress:
@@ -129,11 +132,13 @@ class FCServer:
             else:
                 self.login()
 
-    def _api_call(self, method: str, params: Dict) -> ET.Element:
+    def _api_call(
+        self, method: str, params: Dict, headers: Optional[Dict] = None
+    ) -> ET.Element:
         """
         Perform a FC API call (post)
         """
-        resp = self.session.post(self.url + method, data=params)
+        resp = self.session.post(self.url + method, data=params, headers=headers)
         resp.raise_for_status()
         self.last_headers = resp.headers
         return ET.fromstring(resp.content)
@@ -182,6 +187,15 @@ class FCServer:
             self._raise_exception_from_server_message(
                 resp.findtext("./command/message", "")
             )
+
+    def _extract_etag(self, etag: str):
+        """
+        Extract ETag value from header
+        """
+        if etag.startswith('"') and etag.endswith('"'):
+            return etag[1:-1]
+        else:
+            return etag
 
     def login(self) -> None:
         """
@@ -305,6 +319,7 @@ class FCServer:
             entry.findtext("./isshareable", "1") == "1",
             entry.findtext("./issyncable", "1") == "1",
             entry.findtext("./isdatasyncable", "1") == "1",
+            entry.findtext("./etag", ""),
         )
 
     def getfilelist(
@@ -368,7 +383,7 @@ class FCServer:
         """
         Returns information about file/directory 'path'
         """
-        resp = self._api_call("/core/fileinfo", {"file": path})
+        resp = self._api_call("/core/fileinfo", {"file": path, "includeextrafields": 1})
 
         entry = resp.find("./entry")
 
@@ -598,7 +613,7 @@ class FCServer:
             else:
                 self.downloadfile(path + "/" + file.name, dstFn)
 
-    def deletefile(self, path: str, adminproxyuserid: Optional[str] = None):
+    def deletefile(self, path: str, adminproxyuserid: Optional[str] = None) -> None:
         """
         Delete file at 'path'
         """
@@ -619,11 +634,11 @@ class FCServer:
         nofileoverwrite: Optional[bool] = False,
         iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
-    ) -> None:
+    ) -> ETag:
         """
         Upload bytes 'data' to server at 'serverpath'.
         """
-        self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, nofileoverwrite=nofileoverwrite, iflastmodified=iflastmodified, progress=progress)  # type: ignore
+        return self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, nofileoverwrite=nofileoverwrite, iflastmodified=iflastmodified, progress=progress)  # type: ignore
 
     def upload_str(
         self,
@@ -633,11 +648,11 @@ class FCServer:
         nofileoverwrite: Optional[bool] = False,
         iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
-    ) -> None:
+    ) -> ETag:
         """
         Upload str 'data' UTF-8 encoded to server at 'serverpath'.
         """
-        self.upload_bytes(
+        return self.upload_bytes(
             data.encode("utf-8"),
             serverpath,
             datemodified,
@@ -655,12 +670,12 @@ class FCServer:
         iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
-    ) -> None:
+    ) -> ETag:
         """
         Upload file at 'localpath' to server at 'serverpath'.
         """
         with open(localpath, "rb") as uploadf:
-            self.upload(
+            return self.upload(
                 uploadf,
                 serverpath,
                 datemodified,
@@ -689,7 +704,7 @@ class FCServer:
         iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
-    ) -> None:
+    ) -> ETag:
         """
         Upload seekable stream at uploadf to server at 'serverpath'
         """
@@ -833,6 +848,7 @@ class FCServer:
             resp = self.session.post(
                 self.url + "/core/upload?" + params_str,
                 files={"file_contents": (name, b"")},
+                headers={SEND_ETAG_HEADER: "1"},
             )
 
             resp.raise_for_status()
@@ -841,7 +857,7 @@ class FCServer:
                 log.warning(f"Upload error. Response: {resp.text}")
                 raise ServerError("", resp.text)
 
-            return
+            return self._extract_etag(resp.headers["ETag"])
 
         rf = RequestField(name="file_contents", data=data_marker, filename=name)
         rf.make_multipart()
@@ -850,7 +866,7 @@ class FCServer:
 
         headers = {"Content-type": content_type}
 
-        while pos < data_size or (data_size == 0 and pos == 0):
+        while True:
 
             curr_slice_size = min(slice_size, data_size - pos)
             complete = 0 if pos + curr_slice_size < data_size else 1
@@ -881,6 +897,9 @@ class FCServer:
                     "%%2FSHARED%2F%21", "%2FSHARED%2F!"
                 )  # WEBUI DOES NOT ENCODE THE !
 
+            if complete == 1:
+                headers[SEND_ETAG_HEADER] = "1"
+
             resp = self.session.post(
                 self.url + "/core/upload?" + params_str,
                 data=FileSlice(uploadf, pos, curr_slice_size, envelope),
@@ -898,6 +917,10 @@ class FCServer:
 
             if progress is not None:
                 progress.update(pos, data_size, True)
+
+            if complete == 1:
+                assert pos == data_size
+                return self._extract_etag(resp.headers["ETag"])
 
     def share(self, path: str, adminproxyuserid: str = "") -> FCShare:
         """
@@ -1048,7 +1071,7 @@ class FCServer:
         path: str,
         subpath: Optional[str] = None,
         adminproxyuserid: Optional[str] = None,
-    ) -> None:
+    ) -> ETag:
         """
         Create folder at 'path'
         """
@@ -1066,9 +1089,11 @@ class FCServer:
         resp = self._api_call(
             "/core/createfolder",
             payload,
+            headers={SEND_ETAG_HEADER: "1"},
         )
 
         self._raise_exception_from_command(resp)
+        return self._extract_etag(self.last_headers["ETag"])
 
     def renamefile(self, path: str, name: str, newname) -> None:
         """
