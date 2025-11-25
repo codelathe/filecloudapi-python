@@ -199,6 +199,7 @@ class SyncDeltaItem:
     candownload: bool
     canupload: bool
     canrename: bool
+    etag: str
 
 
 @dataclass
