@@ -1461,6 +1461,7 @@ class FCServer:
                 "path": sync_folder.path,
                 "status": f"server,{sync_folder.update_version};",
                 "permissions": "1" if with_permissions else "0",
+                "includeextrafields": "1",
             },
         )
 
@@ -1482,6 +1483,7 @@ class FCServer:
                 int(entry.findtext("./candownload", "0")) == 1,
                 int(entry.findtext("./canupload", "0")) == 1,
                 int(entry.findtext("./canrename", "0")) == 1,
+                entry.findtext("./etag", ""),
             )
             sync_delta.append(ne)
 
