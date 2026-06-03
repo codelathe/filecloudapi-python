@@ -634,11 +634,12 @@ class FCServer:
         nofileoverwrite: Optional[bool] = False,
         iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
+        ifetag: Optional[str] = None,
     ) -> ETag:
         """
         Upload bytes 'data' to server at 'serverpath'.
         """
-        return self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, nofileoverwrite=nofileoverwrite, iflastmodified=iflastmodified, progress=progress)  # type: ignore
+        return self.upload(BufferedReader(BytesIO(data)), serverpath, datemodified, nofileoverwrite=nofileoverwrite, iflastmodified=iflastmodified, progress=progress, ifetag=ifetag)  # type: ignore
 
     def upload_str(
         self,
@@ -648,6 +649,7 @@ class FCServer:
         nofileoverwrite: Optional[bool] = False,
         iflastmodified: Optional[datetime.datetime] = None,
         progress: Optional[Progress] = None,
+        ifetag: Optional[str] = None,
     ) -> ETag:
         """
         Upload str 'data' UTF-8 encoded to server at 'serverpath'.
@@ -659,6 +661,7 @@ class FCServer:
             nofileoverwrite=nofileoverwrite,
             iflastmodified=iflastmodified,
             progress=progress,
+            ifetag=ifetag,
         )
 
     def upload_file(
@@ -670,6 +673,7 @@ class FCServer:
         iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
+        ifetag: Optional[str] = None,
     ) -> ETag:
         """
         Upload file at 'localpath' to server at 'serverpath'.
@@ -683,6 +687,7 @@ class FCServer:
                 iflastmodified,
                 adminproxyuserid=adminproxyuserid,
                 progress=progress,
+                ifetag=ifetag,
             )
 
     def _serverdatetime(self, dt: datetime.datetime):
@@ -704,6 +709,7 @@ class FCServer:
         iflastmodified: Optional[datetime.datetime] = None,
         adminproxyuserid: Optional[str] = None,
         progress: Optional[Progress] = None,
+        ifetag: Optional[str] = None,
     ) -> ETag:
         """
         Upload seekable stream at uploadf to server at 'serverpath'
@@ -838,6 +844,9 @@ class FCServer:
             if iflastmodified is not None:
                 params["iflastmodified"] = str(int(iflastmodified.timestamp()))
 
+            if ifetag is not None:
+                params["ifetag"] = ifetag
+
             params_str = urlencode(params)
 
             if params_str.find("%2FSHARED%2F%21"):
@@ -886,6 +895,9 @@ class FCServer:
 
             if iflastmodified is not None:
                 params["iflastmodified"] = str(int(iflastmodified.timestamp()))
+
+            if ifetag is not None:
+                params["ifetag"] = ifetag
 
             if data_size is not None:
                 params["filesize"] = data_size
